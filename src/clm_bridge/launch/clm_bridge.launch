@@ -1,0 +1,19 @@
+
+<launch>
+
+  <!--<arg name="value" default="0"/>-->
+  <!--<arg name="webcam_num"/>-->
+  <!--<param name ="device" value="$(arg webcam_num)" type="int"/>-->
+  <!--<node pkg="clm_bridge" type="clm_bridge" name="clm_bridge" output="screen"></node>-->
+
+   <!-- type="int"/> -->
+
+  <node pkg="clm_bridge" type="clm_bridge" name="clm_bridge">
+	param name ="device_test" type ="int" value="0"/> 
+  </node>
+
+
+  <!--<include file="$(find kinect_bridge2)/launch/kinect_client.launch" />-->
+
+  <!--For launching GUI tools <include file="$(find node_example)/launch/tools.launch"/>-->
+</launch>
