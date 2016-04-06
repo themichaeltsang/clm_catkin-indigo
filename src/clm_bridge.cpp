@@ -153,7 +153,11 @@ void create_directory(string output_path)
 }
 
 // Extracting the following command line arguments -f, -fd, -op, -of, -ov (and possible ordered repetitions)
-void get_output_feature_params(vector<string> &output_similarity_aligned, bool &vid_output, vector<string> &output_gaze_files, vector<string> &output_hog_aligned_files, vector<string> &output_model_param_files, vector<string> &output_au_files, double &similarity_scale, int &similarity_size, bool &grayscale, bool &rigid, bool& verbose, vector<string> &arguments)
+void get_output_feature_params(vector<string> &output_similarity_aligned, bool &vid_output,
+							   vector<string> &output_gaze_files, vector<string> &output_hog_aligned_files,
+							   vector<string> &output_model_param_files, vector<string> &output_au_files,
+							   double &similarity_scale, int &similarity_size, bool &grayscale, bool &rigid,
+							   bool& verbose, vector<string> &arguments)
 {
 	output_similarity_aligned.clear();
 	vid_output = false;
@@ -497,7 +501,7 @@ int main (int argc, char **argv)
 	clm_params.curr_face_detector = CLMTracker::CLMParameters::HOG_SVM_DETECTOR;
 
 	// TODO a command line argument
-	clm_params.track_gaze = true;
+	clm_params.track_gaze = false;
 
 	vector<CLMTracker::CLMParameters> clm_parameters;
 	clm_parameters.push_back(clm_params);    
@@ -564,21 +568,25 @@ int main (int argc, char **argv)
 	int num_hog_rows;
 	int num_hog_cols;
 
-	get_output_feature_params(output_similarity_align, video_output, gaze_output_files, output_hog_align_files, params_output_files, output_au_files, sim_scale, sim_size, grayscale, rigid, verbose, arguments);
+	get_output_feature_params(output_similarity_align, video_output, gaze_output_files,
+							  output_hog_align_files, params_output_files, output_au_files,
+							  sim_scale, sim_size, grayscale, rigid, verbose, arguments);
 	
 	// Used for image masking
 
 	Mat_<int> triangulation;
-	string tri_loc;
-	if(boost::filesystem::exists(path("model/tris_68_full.txt")))
+	string tri_loc  = "";
+	string tri_name = "model/tris_68_full.txt";
+
+	if(boost::filesystem::exists(path(tri_name.c_str())))
 	{
-		std::ifstream triangulation_file("model/tris_68_full.txt");
+		std::ifstream triangulation_file(tri_name.c_str());
 		CLMTracker::ReadMat(triangulation_file, triangulation);
-		tri_loc = "model/tris_68_full.txt";
+		tri_loc = tri_name.c_str();
 	}
 	else
 	{
-		path loc = path(arguments[0]).parent_path() / "model/tris_68_full.txt";
+		path loc = path(arguments[0]).parent_path() / tri_name.c_str();
 		tri_loc = loc.string();
 
 		if(exists(loc))
@@ -588,7 +596,7 @@ int main (int argc, char **argv)
 		}
 		else
 		{
-			ROS_ERROR("Could not find triangulation files, exiting.");
+			ROS_ERROR("Could not find triangulation files (i.e. %s), exiting.", tri_name.c_str());
 			return 0;
 		}
 	}	
@@ -598,15 +606,16 @@ int main (int argc, char **argv)
 	bool done = false;	
 	int f_n = -1;
 	int curr_img = -1;
+	string au_loc  = "";
+	string au_name = "AU_predictors/AU_all_best.txt";
 
-	string au_loc;
-	if(boost::filesystem::exists(path("AU_predictors/AU_all_best.txt")))
+	if(boost::filesystem::exists(path(au_name.c_str())))
 	{
-		au_loc = "AU_predictors/AU_all_best.txt";
+		au_loc = au_name;
 	}
 	else
 	{
-		path loc = path(arguments[0]).parent_path() / "AU_predictors/AU_all_best.txt";
+		path loc = path(arguments[0]).parent_path() / au_name.c_str();
 
 		if(exists(loc))
 		{
@@ -614,7 +623,7 @@ int main (int argc, char **argv)
 		}
 		else
 		{
-			ROS_ERROR("Could not find AU prediction files, exiting.");
+			ROS_ERROR("Could not find AU prediction files (i.e. %s), exiting.", au_name.c_str());
 			return 0;
 		}
 	}	
