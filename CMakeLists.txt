@@ -167,6 +167,11 @@ target_link_libraries(clm_bridge ${catkin_LIBRARIES}
                                  opencv_videoio opencv_objdetect
                                  ${Boost_LIBRARIES} ${TBB_LIBRARIES})
 
+add_custom_command(TARGET clm_bridge POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory  ${PROJECT_SOURCE_DIR}/lib/local/CLM/model ${CATKIN_DEVEL_PREFIX}/lib/clm_bridge/model
+    COMMAND ${CMAKE_COMMAND} -E copy_directory  ${PROJECT_SOURCE_DIR}/lib/local/FaceAnalyser/AU_predictors ${CATKIN_DEVEL_PREFIX}/lib/clm_bridge/AU_predictors
+    COMMENT "Moving model files..")
+
 #############
 ## Install ##
 #############
@@ -182,27 +187,25 @@ target_link_libraries(clm_bridge ${catkin_LIBRARIES}
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS clm_bridge clm_bridge_node
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+install(TARGETS clm_bridge
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+)
 
 ## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h"
+)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
+install(DIRECTORY launch/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+  FILES_MATCHING PATTERN "*.launch"
+)
 
-#############rm 
+#############
 ## Testing ##
 #############
 
@@ -214,22 +217,4 @@ target_link_libraries(clm_bridge ${catkin_LIBRARIES}
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
-
-message("${OpenCV_LIBS}")
-
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.h"
-)
-
-install(TARGETS clm_bridge
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-)
-
-install(DIRECTORY launch/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
-  FILES_MATCHING PATTERN "*.launch"
-)
 
