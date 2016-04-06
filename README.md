@@ -86,9 +86,13 @@ If everything is ok , simply `cd` in the catkin workspace, and type:
 
 ```
 catkin_make
-catkin_make install
 rospack profile
 ```
 
 ## 5. Usage
 
+The default usage is pretty simple. Just be sure that there is a `roscore` instance in your local network, and then launch the node with `roslaunch`:
+
+```
+roslaunch clm_bridge clm_bridge.launch
+```
