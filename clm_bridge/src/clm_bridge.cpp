@@ -491,11 +491,9 @@ int main (int argc, char **argv)
 
 	//int device = 1;
 
-
 	CLMTracker::CLMParameters clm_params(arguments);
-		clm_params.use_face_template = true;    
-	// This is so that the model would not try re-initialising itself
-	clm_params.reinit_video_every = -1;
+	clm_params.use_face_template = true;    
+	clm_params.reinit_video_every = -1;		// This is to avoid the model to try re-initialising itself
 	clm_params.curr_face_detector = CLMTracker::CLMParameters::HOG_SVM_DETECTOR;
 
 	// TODO a command line argument
@@ -503,10 +501,6 @@ int main (int argc, char **argv)
 
 	vector<CLMTracker::CLMParameters> clm_parameters;
 	clm_parameters.push_back(clm_params);    
-
-
-
-
 
 	// Get the input output file parameters
 	
