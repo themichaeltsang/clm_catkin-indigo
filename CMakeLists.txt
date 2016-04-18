@@ -13,18 +13,17 @@ find_package(catkin REQUIRED)
 
 find_package(catkin REQUIRED COMPONENTS message_generation roscpp std_msgs)
 
-# find_package(TBB REQUIRED)
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR};${CMAKE_MODULE_PATH}")
+find_package( TBB REQUIRED)
+
 find_package( OpenCV 3.0 REQUIRED )
 find_package( Boost REQUIRED COMPONENTS filesystem system)
 
-INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS}/boost)
-LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})	
+include_directories(${OpenCV_INCLUDE_DIRS})
 
-#find_package(TBB REQUIRED)
-
-INCLUDE_DIRECTORIES(${BOOST_INCLUDE_DIR})
-
+include_directories(${Boost_INCLUDE_DIRS})
+include_directories(${Boost_INCLUDE_DIRS}/boost)
+link_directories(${Boost_LIBRARY_DIRS})	
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -128,15 +127,15 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(include /lib)
+include_directories(include 1lib)
 link_directories( lib )
 
-# dlib
+# Resolve includes
 include_directories(lib/3rdParty/dlib/include)
-include_directories(lib/local/CLM/include) #resolves includes
+include_directories(lib/local/CLM/include)
 include_directories(lib/local/FaceAnalyser/include)	
 
-# dlib library
+# Compile Libraries
 add_subdirectory(lib/3rdParty/dlib) #compiles these
 
 # CLM library (ordering matters)
@@ -158,19 +157,20 @@ add_executable(clm_bridge src/clm_bridge.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(clm_bridge_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(clm_bridge ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(clm_bridge_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(clm_bridge ${catkin_LIBRARIES}
+                                 CLM #links current build with this library
+                                 FaceAnalyser
+                                 dlib
+                                 opencv_videoio opencv_objdetect
+                                 ${Boost_LIBRARIES} ${TBB_LIBRARIES})
 
-
-target_link_libraries(clm_bridge ${catkin_LIBRARIES})
-target_link_libraries(clm_bridge CLM) #links current build with this library
-target_link_libraries(clm_bridge FaceAnalyser)
-target_link_libraries(clm_bridge dlib)
-target_link_libraries(clm_bridge ${OpenCV_LIBS} ${Boost_LIBRARIES} ${TBB_LIBRARIES})
+add_custom_command(TARGET clm_bridge POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory  ${PROJECT_SOURCE_DIR}/lib/local/CLM/model ${CATKIN_DEVEL_PREFIX}/lib/clm_bridge/model
+    COMMAND ${CMAKE_COMMAND} -E copy_directory  ${PROJECT_SOURCE_DIR}/lib/local/FaceAnalyser/AU_predictors ${CATKIN_DEVEL_PREFIX}/lib/clm_bridge/AU_predictors
+    COMMENT "Moving model files..")
 
 #############
 ## Install ##
@@ -187,27 +187,25 @@ target_link_libraries(clm_bridge ${OpenCV_LIBS} ${Boost_LIBRARIES} ${TBB_LIBRARI
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS clm_bridge clm_bridge_node
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
+install(TARGETS clm_bridge
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+)
 
 ## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h"
+)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
+install(DIRECTORY launch/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+  FILES_MATCHING PATTERN "*.launch"
+)
 
-#############rm 
+#############
 ## Testing ##
 #############
 
@@ -219,24 +217,4 @@ target_link_libraries(clm_bridge ${OpenCV_LIBS} ${Boost_LIBRARIES} ${TBB_LIBRARI
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
-
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.h"
-)
-
-install(TARGETS clm_bridge
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-)
-
-install(DIRECTORY launch
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
-
-add_custom_command(TARGET clm_bridge
-          POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/../../devel/lib/clm_bridge/clm_bridge ${PROJECT_SOURCE_DIR}/bin/clm_bridge
-)
 

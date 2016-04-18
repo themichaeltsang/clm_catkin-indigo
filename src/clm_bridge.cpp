@@ -57,7 +57,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-// FeatureExtraction.cpp : Defines the entry point for the feature extraction console application.
 #include "CLM_core.h"
 
 #include <fstream>
@@ -71,32 +70,13 @@
 #include <GazeEstimation.h>
 
 #include <ros/ros.h>
+
 #include <clm_bridge/ClmHeads.h>
 //#include <clm_bridge/ClmEyeGaze.h>
 //#include <clm_bridge/ClmFacialActionUnit.h>
 
-
-
 #include <filesystem.hpp>
 #include <filesystem/fstream.hpp>
-
-#define INFO_STREAM( stream ) \
-std::cout << stream << std::endl
-
-#define WARN_STREAM( stream ) \
-std::cout << "Warning: " << stream << std::endl
-
-#define ERROR_STREAM( stream ) \
-std::cout << "Error: " << stream << std::endl
-
-static void printErrorAndAbort( const std::string & error )
-{
-    std::cout << error << std::endl;
-    abort();
-}
-
-#define FATAL_STREAM( stream ) \
-printErrorAndAbort( std::string( "Fatal error: " ) + stream )
 
 using namespace std;
 using namespace cv;
@@ -151,33 +131,33 @@ void create_directory_from_file(string output_path)
 
 	if(!p.empty() && !boost::filesystem::exists(p))		
 	{
-		bool success = boost::filesystem::create_directories(p);
-		if(!success)
+		if(!boost::filesystem::create_directories(p))
 		{
-			cout << "Failed to create a directory... " << p.string() << endl;
+			ROS_ERROR("Failed to create the directory: %s", p.string().c_str());
 		}
 	}
 }
 
 void create_directory(string output_path)
 {
-
 	// Creating the right directory structure
 	auto p = path(output_path);
 
 	if(!boost::filesystem::exists(p))		
-	{
-		bool success = boost::filesystem::create_directories(p);
-		
-		if(!success)
+	{		
+		if(!boost::filesystem::create_directories(p))
 		{
-			cout << "Failed to create a directory..." << p.string() << endl;
+			ROS_ERROR("Failed to create the directory: %s", p.string().c_str());
 		}
 	}
 }
 
 // Extracting the following command line arguments -f, -fd, -op, -of, -ov (and possible ordered repetitions)
-void get_output_feature_params(vector<string> &output_similarity_aligned, bool &vid_output, vector<string> &output_gaze_files, vector<string> &output_hog_aligned_files, vector<string> &output_model_param_files, vector<string> &output_au_files, double &similarity_scale, int &similarity_size, bool &grayscale, bool &rigid, bool& verbose, vector<string> &arguments)
+void get_output_feature_params(vector<string> &output_similarity_aligned, bool &vid_output,
+							   vector<string> &output_gaze_files, vector<string> &output_hog_aligned_files,
+							   vector<string> &output_model_param_files, vector<string> &output_au_files,
+							   double &similarity_scale, int &similarity_size, bool &grayscale, bool &rigid,
+							   bool& verbose, vector<string> &arguments)
 {
 	output_similarity_aligned.clear();
 	vid_output = false;
@@ -446,7 +426,7 @@ int64 t0 = 0;
 // 		// A rough heuristic for box around the face width
 // 		int thickness = (int)std::ceil(2.0* ((double)captured_image.cols) / 640.0);
 
-// 		Vec6d pose_estimate_to_draw = CLMTracker::GetCorrectedPoseCameraPlane(clm_model, fx, fy, cx, cy);
+// 		Vec6d pose_estimate_to_draw = CLMTracker::GetCorrectedPoseWorld(clm_model, fx, fy, cx, cy);
 
 // 		// Draw it in reddish if uncertain, blueish if certain
 // 		CLMTracker::DrawBox(captured_image, pose_estimate_to_draw, Scalar((1 - vis_certainty)*255.0, 0, vis_certainty * 255), thickness, fx, fy, cx, cy);
@@ -515,22 +495,16 @@ int main (int argc, char **argv)
 
 	//int device = 1;
 
-
 	CLMTracker::CLMParameters clm_params(arguments);
-		clm_params.use_face_template = true;    
-	// This is so that the model would not try re-initialising itself
-	clm_params.reinit_video_every = -1;
+	clm_params.use_face_template = true;    
+	clm_params.reinit_video_every = -1;		// This is to avoid the model to try re-initialising itself
 	clm_params.curr_face_detector = CLMTracker::CLMParameters::HOG_SVM_DETECTOR;
 
 	// TODO a command line argument
-	clm_params.track_gaze = true;
+	clm_params.track_gaze = false;
 
 	vector<CLMTracker::CLMParameters> clm_parameters;
 	clm_parameters.push_back(clm_params);    
-
-
-
-
 
 	// Get the input output file parameters
 	
@@ -594,21 +568,25 @@ int main (int argc, char **argv)
 	int num_hog_rows;
 	int num_hog_cols;
 
-	get_output_feature_params(output_similarity_align, video_output, gaze_output_files, output_hog_align_files, params_output_files, output_au_files, sim_scale, sim_size, grayscale, rigid, verbose, arguments);
+	get_output_feature_params(output_similarity_align, video_output, gaze_output_files,
+							  output_hog_align_files, params_output_files, output_au_files,
+							  sim_scale, sim_size, grayscale, rigid, verbose, arguments);
 	
 	// Used for image masking
 
 	Mat_<int> triangulation;
-	string tri_loc;
-	if(boost::filesystem::exists(path("model/tris_68_full.txt")))
+	string tri_loc  = "";
+	string tri_name = "model/tris_68_full.txt";
+
+	if(boost::filesystem::exists(path(tri_name.c_str())))
 	{
-		std::ifstream triangulation_file("model/tris_68_full.txt");
+		std::ifstream triangulation_file(tri_name.c_str());
 		CLMTracker::ReadMat(triangulation_file, triangulation);
-		tri_loc = "model/tris_68_full.txt";
+		tri_loc = tri_name.c_str();
 	}
 	else
 	{
-		path loc = path(arguments[0]).parent_path() / "model/tris_68_full.txt";
+		path loc = path(arguments[0]).parent_path() / tri_name.c_str();
 		tri_loc = loc.string();
 
 		if(exists(loc))
@@ -618,7 +596,7 @@ int main (int argc, char **argv)
 		}
 		else
 		{
-			cout << "Can't find triangulation files, exiting" << endl;
+			ROS_ERROR("Could not find triangulation files (i.e. %s), exiting.", tri_name.c_str());
 			return 0;
 		}
 	}	
@@ -628,17 +606,16 @@ int main (int argc, char **argv)
 	bool done = false;	
 	int f_n = -1;
 	int curr_img = -1;
+	string au_loc  = "";
+	string au_name = "AU_predictors/AU_all_best.txt";
 
-
-
-	string au_loc;
-	if(boost::filesystem::exists(path("AU_predictors/AU_all_best.txt")))
+	if(boost::filesystem::exists(path(au_name.c_str())))
 	{
-		au_loc = "AU_predictors/AU_all_best.txt";
+		au_loc = au_name;
 	}
 	else
 	{
-		path loc = path(arguments[0]).parent_path() / "AU_predictors/AU_all_best.txt";
+		path loc = path(arguments[0]).parent_path() / au_name.c_str();
 
 		if(exists(loc))
 		{
@@ -646,7 +623,7 @@ int main (int argc, char **argv)
 		}
 		else
 		{
-			cout << "Can't find AU prediction files, exiting" << endl;
+			ROS_ERROR("Could not find AU prediction files (i.e. %s), exiting.", au_name.c_str());
 			return 0;
 		}
 	}	
@@ -716,7 +693,7 @@ int main (int argc, char **argv)
 			// Do some grabbing
 			if( current_file.size() > 0 )
 			{
-				INFO_STREAM( "Attempting to read from file: " << current_file );
+				ROS_INFO_STREAM( "Attempting to read from file: " << current_file );
 				video_capture = VideoCapture( current_file );
 				total_frames = (int)video_capture.get(CV_CAP_PROP_FRAME_COUNT);
 				fps_vid_in = video_capture.get(CV_CAP_PROP_FPS);
@@ -724,13 +701,13 @@ int main (int argc, char **argv)
 				// Check if fps is nan or less than 0
 				if (fps_vid_in != fps_vid_in || fps_vid_in <= 0)
 				{
-					INFO_STREAM("FPS of the video file cannot be determined, assuming 30");
+					ROS_INFO_STREAM("FPS of the video file cannot be determined, assuming 30");
 					fps_vid_in = 30;
 				}
 			}
 			else
 			{
-				INFO_STREAM( "Attempting to capture from device: " << device );
+				ROS_INFO_STREAM( "Attempting to capture from device: " << device );
 				video_capture = VideoCapture( device );
 				webcam = true;
 
@@ -739,8 +716,8 @@ int main (int argc, char **argv)
 				video_capture >> captured_image;
 			}
 
-			if( !video_capture.isOpened() ) FATAL_STREAM( "Failed to open video source" );
-			else INFO_STREAM( "Device or file opened");
+			if( !video_capture.isOpened() ) ROS_FATAL_STREAM( "Failed to open video source" );
+			else ROS_INFO_STREAM( "Device or file opened");
 
 			video_capture >> captured_image;	
 		}
@@ -755,7 +732,7 @@ int main (int argc, char **argv)
 			}
 			else
 			{
-				FATAL_STREAM( "No .jpg or .png images in a specified drectory" );
+				ROS_FATAL_STREAM( "No .jpg or .png images in a specified drectory" );
 			}
 
 		}	
@@ -818,7 +795,7 @@ int main (int argc, char **argv)
 		// Timestamp in seconds of current processing
 		double time_stamp = 0;
 
-		INFO_STREAM( "Starting tracking");
+		ROS_INFO_STREAM( "Starting tracking");
 		while( (!captured_image.empty()) && nh.ok() )
 		{		
 			// Grab the timestamp first
@@ -869,7 +846,7 @@ int main (int argc, char **argv)
 				}
 				else
 				{
-					WARN_STREAM( "Can't find depth image" );
+					ROS_WARN_STREAM( "Can't find depth image" );
 				}
 			}
 
@@ -943,7 +920,7 @@ int main (int argc, char **argv)
 							}
 							else
 							{
-								FATAL_STREAM("Standalone images cannot be used in this release");
+								ROS_FATAL_STREAM("Standalone images cannot be used in this release");
 								//detection_success = CLMTracker::DetectLandmarksInImage(grayscale_image, clm_model, clm_params);
 							}
 							// This activates the model
@@ -964,7 +941,7 @@ int main (int argc, char **argv)
 					}
 					else
 					{
-						FATAL_STREAM("Standalone images cannot be used in this release");
+						ROS_FATAL_STREAM("Standalone images cannot be used in this release");
 						//detection_success = CLMTracker::DetectLandmarksInImage(grayscale_image, clm_model, clm_params);
 					}	
 
@@ -1014,7 +991,7 @@ int main (int argc, char **argv)
 					Vec6d pose_estimate_CLM;
 					if(use_camera_plane_pose)
 					{
-						pose_estimate_CLM = CLMTracker::GetCorrectedPoseCameraPlane(clm_models[model], fx, fy, cx, cy);
+						pose_estimate_CLM = CLMTracker::GetCorrectedPoseWorld(clm_models[model], fx, fy, cx, cy);
 					}
 					else
 					{
@@ -1178,7 +1155,7 @@ int main (int argc, char **argv)
 					int thickness = (int)std::ceil(2.0* ((double)captured_image.cols) / 640.0);
 					
 					// Work out the pose of the head from the tracked model
-					Vec6d pose_estimate_CLM = CLMTracker::GetCorrectedPoseCameraPlane(clm_models[model], fx, fy, cx, cy);
+					Vec6d pose_estimate_CLM = CLMTracker::GetCorrectedPoseWorld(clm_models[model], fx, fy, cx, cy);
 					
 					// Draw it in reddish if uncertain, blueish if certain
 					CLMTracker::DrawBox(disp_image, pose_estimate_CLM, Scalar((1-detection_certainty)*255.0,0, detection_certainty*255), thickness, fx, fy, cx, cy);
